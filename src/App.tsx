@@ -11,11 +11,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { BookOpen, FileText, Upload, Sun, Moon, List, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Bookmark } from "lucide-react";
 import ePub from "epubjs";
 import * as pdfjsLib from "pdfjs-dist";
-import "pdfjs-dist/web/pdf_viewer.css";
 
 // PDF.js worker 설정
-// 주의: 번들러 환경에서는 아래 경로를 알맞게 조정하세요.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// 여러 CDN을 시도하여 worker 파일 로드
+const workerSrcs = [
+  `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`,
+  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`,
+  `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
+];
+
+// 첫 번째 worker 경로 설정
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrcs[0];
 
 /**
  * 웹용 전자책 뷰어 MVP
@@ -142,12 +148,20 @@ function EbookViewer() {
 
   /** PDF 로드 */
   const loadPdf = async (src: string | ArrayBuffer) => {
-    const loadingTask = pdfjsLib.getDocument({ data: typeof src !== "string" ? src : undefined, url: typeof src === "string" ? src : undefined });
-    const pdf = await loadingTask.promise;
-    pdfDocRef.current = pdf;
-    setPdfPages(pdf.numPages);
-    setPdfPage(1);
-    await renderPdfPage(pdf, 1, pdfScale);
+    try {
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: typeof src !== "string" ? src : undefined, 
+        url: typeof src === "string" ? src : undefined 
+      });
+      const pdf = await loadingTask.promise;
+      pdfDocRef.current = pdf;
+      setPdfPages(pdf.numPages);
+      setPdfPage(1);
+      await renderPdfPage(pdf, 1, pdfScale);
+    } catch (error) {
+      console.error('PDF 로드 실패:', error);
+      alert('PDF 파일을 로드하는 중 오류가 발생했습니다. 파일을 확인해주세요.');
+    }
   };
 
   const renderPdfPage = async (pdf: any, pageNum: number, scale: number) => {
