@@ -10,11 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BookOpen, FileText, Upload, Sun, Moon, List, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Bookmark } from "lucide-react";
 import ePub from "epubjs";
-import * as pdfjsLib from "pdfjs-dist";
 
-// PDF.js worker 설정
-// GitHub Pages 환경에서 안정적인 설정
-pdfjsLib.GlobalWorkerOptions.workerSrc = ''; // Worker 비활성화하여 fake worker 사용
+
+
 
 /**
  * 웹용 전자책 뷰어 MVP
@@ -41,6 +39,8 @@ function useDarkMode() {
 function EbookViewer() {
   const { dark, setDark } = useDarkMode();
 
+
+
   // 공통 상태
   const [activeTab, setActiveTab] = useState("epub");
   const [url, setUrl] = useState("");
@@ -58,7 +58,7 @@ function EbookViewer() {
   const [bookmarks, setBookmarks] = useState<string[]>([]); // EPUB CFI 저장
 
   // PDF 상태/참조
-  const pdfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pdfContainerRef = useRef<HTMLDivElement | null>(null);
   const pdfDocRef = useRef<any>(null);
   const [pdfPage, setPdfPage] = useState(1);
   const [pdfPages, setPdfPages] = useState(0);
@@ -142,31 +142,50 @@ function EbookViewer() {
   /** PDF 로드 */
   const loadPdf = async (src: string | ArrayBuffer) => {
     try {
-      const loadingTask = pdfjsLib.getDocument({ 
-        data: typeof src !== "string" ? src : undefined, 
-        url: typeof src === "string" ? src : undefined
-      } as any);
-      const pdf = await loadingTask.promise;
-      pdfDocRef.current = pdf;
-      setPdfPages(pdf.numPages);
-      setPdfPage(1);
-      await renderPdfPage(pdf, 1, pdfScale);
+      // 브라우저 내장 PDF 뷰어 사용 (worker 불필요)
+      if (typeof src === "string") {
+        // URL인 경우
+        setPdfPages(0); // 페이지 수는 알 수 없음
+        setPdfPage(1);
+        // iframe으로 PDF 표시
+        const iframe = document.createElement('iframe');
+        iframe.src = src;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        
+        const container = pdfContainerRef.current;
+        if (container) {
+          container.innerHTML = '';
+          container.appendChild(iframe);
+        }
+      } else {
+        // 파일인 경우
+        const blob = new Blob([src], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        setPdfPages(0);
+        setPdfPage(1);
+        
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        
+        const container = pdfContainerRef.current;
+        if (container) {
+          container.innerHTML = '';
+          container.appendChild(iframe);
+        }
+      }
     } catch (error) {
       console.error('PDF 로드 실패:', error);
       alert('PDF 파일을 로드하는 중 오류가 발생했습니다. 파일을 확인해주세요.');
     }
   };
 
-  const renderPdfPage = async (pdf: any, pageNum: number, scale: number) => {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale });
-    const canvas = pdfCanvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const renderContext = { canvasContext: ctx, viewport };
-    await page.render(renderContext).promise;
-  };
+
 
   // 다크모드 시 EPUB 테마 변경
   useEffect(() => {
@@ -220,21 +239,16 @@ function EbookViewer() {
   };
 
   const pdfPrev = async () => {
-    if (!pdfDocRef.current) return;
-    const n = Math.max(1, pdfPage - 1);
-    setPdfPage(n);
-    await renderPdfPage(pdfDocRef.current, n, pdfScale);
+    // iframe에서는 페이지 이동 불가 (브라우저 내장 컨트롤 사용)
+    alert('PDF 페이지 이동은 브라우저 내장 컨트롤을 사용하세요.');
   };
   const pdfNext = async () => {
-    if (!pdfDocRef.current) return;
-    const n = Math.min(pdfPages, pdfPage + 1);
-    setPdfPage(n);
-    await renderPdfPage(pdfDocRef.current, n, pdfScale);
+    // iframe에서는 페이지 이동 불가 (브라우저 내장 컨트롤 사용)
+    alert('PDF 페이지 이동은 브라우저 내장 컨트롤을 사용하세요.');
   };
   const pdfZoom = async (delta: number) => {
-    const s = Math.min(3, Math.max(0.5, pdfScale + delta));
-    setPdfScale(s);
-    if (pdfDocRef.current) await renderPdfPage(pdfDocRef.current, pdfPage, s);
+    // iframe에서는 확대/축소 불가 (브라우저 내장 컨트롤 사용)
+    alert('PDF 확대/축소는 브라우저 내장 컨트롤을 사용하세요.');
   };
 
   return (
@@ -360,32 +374,25 @@ function EbookViewer() {
             </div>
           </TabsContent>
 
-          {/* PDF VIEWER */}
-          <TabsContent value="pdf">
-            <div className="space-y-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">페이지 & 확대</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={pdfPrev}><ChevronLeft className="h-4 w-4"/></Button>
-                    <span className="text-xs tabular-nums">{pdfPage} / {pdfPages || '-'}</span>
-                    <Button size="sm" variant="outline" onClick={pdfNext}><ChevronRight className="h-4 w-4"/></Button>
-                  </div>
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Button size="sm" variant="outline" onClick={() => pdfZoom(-0.1)}><ZoomOut className="h-4 w-4"/></Button>
-                    <span className="text-xs tabular-nums">{Math.round(pdfScale * 100)}%</span>
-                    <Button size="sm" variant="outline" onClick={() => pdfZoom(0.1)}><ZoomIn className="h-4 w-4"/></Button>
-                  </div>
-                </CardContent>
-              </Card>
+                     {/* PDF VIEWER */}
+           <TabsContent value="pdf">
+             <div className="space-y-3">
+               <Card>
+                 <CardHeader className="pb-2">
+                   <CardTitle className="text-base">PDF 뷰어 (브라우저 내장)</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <p className="text-sm text-muted-foreground">
+                     PDF는 브라우저 내장 뷰어로 표시됩니다. 페이지 이동, 확대/축소는 브라우저 컨트롤을 사용하세요.
+                   </p>
+                 </CardContent>
+               </Card>
 
-              <div className={`${containerBase} h-[75vh] flex items-center justify-center`}>
-                <canvas ref={pdfCanvasRef} className="rounded-xl max-h-full max-w-full" />
-              </div>
-            </div>
-          </TabsContent>
+                                <div className={`${containerBase} h-[75vh] flex items-center justify-center`}>
+                   <div ref={pdfContainerRef} className="w-full h-full rounded-xl" />
+                 </div>
+             </div>
+           </TabsContent>
         </Tabs>
 
         <p className="text-xs text-muted-foreground mt-6">
