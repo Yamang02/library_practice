@@ -13,15 +13,8 @@ import ePub from "epubjs";
 import * as pdfjsLib from "pdfjs-dist";
 
 // PDF.js worker 설정
-// 여러 CDN을 시도하여 worker 파일 로드
-const workerSrcs = [
-  `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`,
-  `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`,
-  `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
-];
-
-// 첫 번째 worker 경로 설정
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrcs[0];
+// GitHub Pages 환경에서 안정적인 설정
+pdfjsLib.GlobalWorkerOptions.workerSrc = ''; // Worker 비활성화하여 fake worker 사용
 
 /**
  * 웹용 전자책 뷰어 MVP
@@ -151,8 +144,8 @@ function EbookViewer() {
     try {
       const loadingTask = pdfjsLib.getDocument({ 
         data: typeof src !== "string" ? src : undefined, 
-        url: typeof src === "string" ? src : undefined 
-      });
+        url: typeof src === "string" ? src : undefined
+      } as any);
       const pdf = await loadingTask.promise;
       pdfDocRef.current = pdf;
       setPdfPages(pdf.numPages);
