@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { BookOpen, FileText, Upload, Sun, Moon, List, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Bookmark } from "lucide-react";
+import { BookOpen, FileText, Upload, Sun, Moon, List, Bookmark } from "lucide-react";
 import ePub from "epubjs";
 
 
@@ -59,10 +59,6 @@ function EbookViewer() {
 
   // PDF 상태/참조
   const pdfContainerRef = useRef<HTMLDivElement | null>(null);
-  const pdfDocRef = useRef<any>(null);
-  const [pdfPage, setPdfPage] = useState(1);
-  const [pdfPages, setPdfPages] = useState(0);
-  const [pdfScale, setPdfScale] = useState(1.2);
 
   // 파일 확장자로 탭 자동 결정(선택)
   useEffect(() => {
@@ -144,10 +140,8 @@ function EbookViewer() {
     try {
       // 브라우저 내장 PDF 뷰어 사용 (worker 불필요)
       if (typeof src === "string") {
-        // URL인 경우
-        setPdfPages(0); // 페이지 수는 알 수 없음
-        setPdfPage(1);
-        // iframe으로 PDF 표시
+              // URL인 경우
+      // iframe으로 PDF 표시
         const iframe = document.createElement('iframe');
         iframe.src = src;
         iframe.style.width = '100%';
@@ -163,9 +157,6 @@ function EbookViewer() {
         // 파일인 경우
         const blob = new Blob([src], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-        
-        setPdfPages(0);
-        setPdfPage(1);
         
         const iframe = document.createElement('iframe');
         iframe.src = url;
@@ -238,18 +229,7 @@ function EbookViewer() {
     }
   };
 
-  const pdfPrev = async () => {
-    // iframe에서는 페이지 이동 불가 (브라우저 내장 컨트롤 사용)
-    alert('PDF 페이지 이동은 브라우저 내장 컨트롤을 사용하세요.');
-  };
-  const pdfNext = async () => {
-    // iframe에서는 페이지 이동 불가 (브라우저 내장 컨트롤 사용)
-    alert('PDF 페이지 이동은 브라우저 내장 컨트롤을 사용하세요.');
-  };
-  const pdfZoom = async (delta: number) => {
-    // iframe에서는 확대/축소 불가 (브라우저 내장 컨트롤 사용)
-    alert('PDF 확대/축소는 브라우저 내장 컨트롤을 사용하세요.');
-  };
+
 
   return (
     <TooltipProvider>
