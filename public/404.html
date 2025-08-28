@@ -5,8 +5,16 @@
     <title>전자책 뷰어</title>
     <script type="text/javascript">
       // GitHub Pages에서 SPA 라우팅을 위한 리다이렉트
-      var pathSegmentsToKeep = 1;
+      var pathSegmentsToKeep = 2; // /username/repository-name/ 경로 유지
       var l = window.location;
+      
+      // 404 페이지에서 메인 페이지로 리다이렉트
+      if (l.pathname.includes('/404.html')) {
+        var basePath = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
+        l.replace(basePath + '/');
+        return;
+      }
+      
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
         l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
